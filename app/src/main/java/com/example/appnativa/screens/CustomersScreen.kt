@@ -112,7 +112,7 @@ fun ShowDialogCustomCustomer(showDialog: MutableState<Boolean>) {
             ),
             modifier = Modifier.background(surfaceDark),
             onDismissRequest = { showDialog.value = false },
-            title = { Text(text = "Agregar Producto", fontWeight = FontWeight.Bold) },
+            title = { Text(text = "Agregar Cliente", fontWeight = FontWeight.Bold) },
             text = {
                 val title = remember { mutableStateOf(TextFieldValue("")) }
                 val description = remember { mutableStateOf(TextFieldValue("")) }
@@ -121,19 +121,13 @@ fun ShowDialogCustomCustomer(showDialog: MutableState<Boolean>) {
                     OutlinedTextField(
                         value = title.value,
                         onValueChange = { title.value = it },
-                        label = { Text("Título") }
+                        label = { Text("Nombre") }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = description.value,
                         onValueChange = { description.value = it },
-                        label = { Text("Descripción") }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = price.value,
-                        onValueChange = { price.value = it },
-                        label = { Text("Precio") }
+                        label = { Text("Correo electronico") }
                     )
                 }
             },
