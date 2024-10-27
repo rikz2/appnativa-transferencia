@@ -87,16 +87,6 @@ fun Home(user:FirebaseUser?) {
     }
 }
 
-//@Preview(showBackground = true)
-//@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun ShowDialogCustom(){
-//    AppnativaTheme(darkTheme = true) {
-//        val showDialog = remember { mutableStateOf(true) }
-//        ShowDialogCustom(showDialog)
-//    }
-//}
 
 @Composable
 fun BodyContent(user:FirebaseUser?) {
