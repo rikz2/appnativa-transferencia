@@ -13,22 +13,23 @@ import com.example.appnativa.screens.Home
 import com.example.appnativa.screens.ShoppingCart
 import com.example.appnativa.screens.ListProducts
 import com.example.appnativa.screens.MainScreen
+import com.google.firebase.auth.FirebaseUser
 
 @Composable
-fun BottomNavGraph(navController: NavHostController) {
+fun BottomNavGraph(navController: NavHostController, user:FirebaseUser?) {
 
     NavHost(
         navController = navController,
         startDestination = BottomBarScreen.Home.route
     ) {
         composable(route = BottomBarScreen.Home.route) {
-            Home()
+            Home(user)
         }
         composable(route = BottomBarScreen.ListProducts.route) {
-            ListProducts()
+            ListProducts(user)
         }
         composable(route = BottomBarScreen.ShoppingCart.route) {
-            ShoppingCart()
+            ShoppingCart(user)
         }
 
         composable(route = BottomBarScreen.Customers.route) {

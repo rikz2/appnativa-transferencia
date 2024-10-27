@@ -137,35 +137,14 @@ fun PreviewCardCustomer(){
 fun CustomerListComponent(status: CustomerStatus) {
     val listItems = listOf(
 
-            CustomerModel(
-                name = "Andres",
-                email = "andres@gmail.com",
-                passWord = "123",
-                status = CustomerStatus.ACTIVE
-            ),
-
-
-            CustomerModel(
-                name = "felipe",
-                email = "felipe@gmail.com",
-                passWord = "123",
-                status = CustomerStatus.INACTIVE
-            ),
-
-            CustomerModel(
-                name = "juan",
-                email = "juan@gmail.com",
-                passWord = "123",
-                status = CustomerStatus.ACTIVE
-            ),
-
-            CustomerModel(
-                name = "kali",
-                email = "kali@gmail.com",
-                passWord = "123",
-                status = CustomerStatus.ACTIVE
-            ),
-        )
+        CustomerModel(
+            id="",
+            name = "Andres",
+            email = "andres@gmail.com",
+            passWord = "123",
+            status = CustomerStatus.ACTIVE
+        ),
+    )
 
     // Filtrar la lista según el estado
     val filteredItems = listItems.filter { it.status == status }

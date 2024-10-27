@@ -41,18 +41,22 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.appnativa.components.ListProductCard
 import com.example.appnativa.models.ProductCardModel
 import com.example.appnativa.models.ProductCardStatus
+import com.example.appnativa.service.ProductService
 import com.example.compose.backgroundDark
 import com.example.compose.errorContainerDarkMediumContrast
 import com.example.compose.primaryDark
 import com.example.compose.surfaceDark
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 
-@Preview(showBackground = true)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListProducts(){
+fun ListProducts(user: FirebaseUser?) {
     val showDialog = remember { mutableStateOf(false) }
     val currentStatus = remember { mutableStateOf(ProductCardStatus.ACTIVE) }
+    val productService = ProductService() // Instanciar ProductService
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
@@ -72,13 +76,12 @@ fun ListProducts(){
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(15.dp)
-                    .padding(top = 16.dp) // Margen superior
-                    .clip(RoundedCornerShape(10.dp)) // Clip primero para asegurarse de que el borde sea redondeado
+                    .padding(top = 16.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color.Black)
                     .border(0.dp, Color.White, RoundedCornerShape(10.dp))
                     .padding(20.dp)
@@ -90,23 +93,30 @@ fun ListProducts(){
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 20.dp) // Asegurarse de que haya espacio alrededor
-            ){
+                    .padding(top = 20.dp)
+            ) {
                 item {
-                    ListProductCard(currentStatus.value)
+                    ListProductCard(currentStatus.value, productService,user)
                 }
             }
-
         }
-        ShowDialogCustom(showDialog)
-
+        ShowDialogCustom(showDialog, productService)
     }
 }
 
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShowDialogCustom(showDialog: MutableState<Boolean>){
+fun ShowDialogCustom(showDialog: MutableState<Boolean>, productService: ProductService) {
     if (showDialog.value) {
+        // Obtain the current user's UID
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+        val image = remember { mutableStateOf(TextFieldValue("")) }
+        val title = remember { mutableStateOf(TextFieldValue("")) }
+        val description = remember { mutableStateOf(TextFieldValue("")) }
+        val price = remember { mutableStateOf(TextFieldValue("")) }
+
         AlertDialog(
             properties = DialogProperties(
                 usePlatformDefaultWidth = false // Permite personalizar el tamaño del diálogo
@@ -115,11 +125,12 @@ fun ShowDialogCustom(showDialog: MutableState<Boolean>){
             onDismissRequest = { showDialog.value = false },
             title = { Text(text = "Agregar Producto", fontWeight = FontWeight.Bold) },
             text = {
-                val title = remember { mutableStateOf(TextFieldValue("")) }
-                val description = remember { mutableStateOf(TextFieldValue("")) }
-                val price = remember { mutableStateOf(TextFieldValue("")) }
-
                 Column {
+                    OutlinedTextField(
+                        value = image.value,
+                        onValueChange = { image.value = it },
+                        label = { Text("Url imágen") }
+                    )
                     OutlinedTextField(
                         value = title.value,
                         onValueChange = { title.value = it },
@@ -143,19 +154,24 @@ fun ShowDialogCustom(showDialog: MutableState<Boolean>){
                 CustomButton(
                     text = "Agregar",
                     onClick = {
-//                            val newProduct = ProductCardModel(
-//                                imageRes = R.drawable.logo, // Ajusta según tus necesidades
-//                                title = title.value.text,
-//                                description = description.value.text,
-//                                price = price.value.text,
-//                                status = CardStatus.ACTIVE // Ajusta según tus necesidades
-//                            )
-//                            AddToProductList(newProduct)
-//                            showDialog.value = false
+                        val newProduct = ProductCardModel(
+                            id = "", // Inicialmente vacío, se actualizará en el servicio
+                            uid = uid, // Pass the user's UID here
+                            imageUrl = image.value.text,
+                            title = title.value.text,
+                            description = description.value.text,
+                            price = price.value.text,
+                            status = ProductCardStatus.ACTIVE
+                        )
+                        productService.addProduct(newProduct) { success ->
+                            if (success) {
+                                showDialog.value = false
+                            } else {
+                                // Maneja el error
+                            }
+                        }
                     },
-                    modifier = Modifier
-//                        .fillMaxWidth()
-                        .height(50.dp),
+                    modifier = Modifier.height(50.dp),
                     backgroundColor = primaryDark,
                     contentColor = Color.Black,
                     fontSize = 18,
@@ -166,20 +182,20 @@ fun ShowDialogCustom(showDialog: MutableState<Boolean>){
                 CustomButton(
                     text = "Cancelar",
                     onClick = { showDialog.value = false },
-                    modifier = Modifier
-//                        .fillMaxWidth()
-                        .height(50.dp),
+                    modifier = Modifier.height(50.dp),
                     backgroundColor = Color.Transparent,
                     contentColor = errorContainerDarkMediumContrast,
                     fontSize = 18,
                     fontWeight = FontWeight.Bold
                 )
-
             }
         )
     }
 }
-
+fun AddToProductList(newProduct: ProductCardModel) {
+    // Aquí puedes agregar el nuevo producto a tu lista de productos
+    // y realizar cualquier otra acción necesaria.
+}
 
 @Composable
 fun CustomButton(
@@ -205,7 +221,3 @@ fun CustomButton(
     }
 }
 
-fun AddToProductList(newProduct: ProductCardModel) {
-    // Aquí puedes agregar el nuevo producto a tu lista de productos
-    // y realizar cualquier otra acción necesaria.
-}

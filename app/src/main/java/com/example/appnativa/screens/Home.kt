@@ -61,6 +61,7 @@ import com.example.appnativa.components.ListProductCard
 import com.example.appnativa.models.ProductCardModel
 import com.example.appnativa.models.ProductCardStatus
 import com.example.appnativa.onLoginSuccess
+import com.example.appnativa.service.ProductService
 import com.example.compose.AppnativaTheme
 import com.example.compose.backgroundDark
 import com.example.compose.backgroundDarkMediumContrast
@@ -71,17 +72,18 @@ import com.example.compose.primaryDark
 import com.example.compose.scrimDark
 import com.example.compose.surfaceDark
 import com.example.compose.surfaceVariantDark
+import com.google.firebase.auth.FirebaseUser
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Home() {
+fun Home(user:FirebaseUser?) {
 
     Scaffold(
 
     ) {
-        BodyContent()
+        BodyContent(user)
     }
 }
 
@@ -97,7 +99,8 @@ fun Home() {
 //}
 
 @Composable
-fun BodyContent() {
+fun BodyContent(user:FirebaseUser?) {
+    val productService = ProductService()
     val currentStatus = remember { mutableStateOf(ProductCardStatus.ACTIVE) }
     Column(
         modifier = Modifier
@@ -107,7 +110,6 @@ fun BodyContent() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
 
         // Usar LazyColumn para ListProductCard
         LazyColumn(
@@ -128,16 +130,15 @@ fun BodyContent() {
                 ) {
                     Column {
                         Text(text = "Bienvenido", color = primaryDark, fontWeight = FontWeight.Bold)
-                        Text(text = callUser(), color = primaryDark)
+                        Text(text = "Usuario: ${user?.email}", color = primaryDark, fontWeight = FontWeight.Bold)
+                        Text(text = "Usuario: ${user?.uid}", color = primaryDark, fontWeight = FontWeight.Bold)
                     }
                 }
-                ListProductCard(currentStatus.value)
+                ListProductCard(currentStatus.value, productService = productService,user)
             }
         }
     }
 }
 
-fun callUser(): String {
-    return "user@gmail.com"
-}
+
 

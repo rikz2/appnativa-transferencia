@@ -37,12 +37,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
+import com.example.appnativa.getUser
+import com.google.firebase.auth.FirebaseAuth
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
+    val user = getUser() // Obtener el email del usuario
+
     AppnativaTheme(darkTheme = true) {
         Scaffold(
             topBar = {
@@ -50,7 +54,7 @@ fun MainScreen() {
                     title = { Text("Retro Shop / Admin") },
                     actions = {
                         IconButton(onClick = {
-                            navController.navigate("logOut")
+                            logout(navController) // Llama a la función de deslogueo
                         }) {
                             Icon(
                                 imageVector = Icons.Default.ExitToApp,
@@ -65,12 +69,16 @@ fun MainScreen() {
             }
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
-                BottomNavGraph(navController = navController)
+                BottomNavGraph(navController = navController, user) // Pasar el email al gráfico de navegación
             }
         }
     }
 }
 
+fun logout(navController: NavController) {
+    FirebaseAuth.getInstance().signOut() // Desloguearse de Firebase
+    navController.navigate("logOut") // Navegar a la pantalla de login
+}
 
 @Preview(showBackground = true)
 @Composable

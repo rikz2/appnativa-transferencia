@@ -45,15 +45,29 @@ import com.example.appnativa.screens.MainScreen
 import com.example.compose.AppnativaTheme
 import com.example.compose.backgroundDark
 import com.example.compose.primaryDark
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.ktx.Firebase
+//import com.google.firebase.auth.ktx.auth
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this) // Inicializar Firebase
         setContent {
             App() // Aquí se llama a tu Composable principal
         }
     }
 }
+
+fun getUser(): FirebaseUser? {
+    val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    val user: FirebaseUser? = auth.currentUser
+    return user
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
@@ -84,6 +98,9 @@ fun AppNavigation() {
 
 @Composable
 fun LoginScreen(navController: NavController) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -92,14 +109,12 @@ fun LoginScreen(navController: NavController) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Logo
         Image(
             painter = painterResource(id = R.drawable.logo),
             contentDescription = "Logo",
             modifier = Modifier.size(200.dp)
         )
         Spacer(modifier = Modifier.height(32.dp))
-        // Título
         Text(
             text = "Iniciar Sesión",
             style = androidx.compose.ui.text.TextStyle(
@@ -109,30 +124,23 @@ fun LoginScreen(navController: NavController) {
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
-        // Campo de Correo Electrónico
         CustomOutlinedTextField(
-            text = "Correo electronico",
+            text = "Correo Electrónico",
             backgroundColor = Color.Transparent,
             textColor = Color.White,
-            onValueChange = { newText ->
-                println("Nuevo texto: $newText")
-            }
+            onValueChange = { newText -> email = newText }
         )
         Spacer(modifier = Modifier.height(8.dp))
-        // Campo de Contraseña
         CustomOutlinedTextField(
             text = "Contraseña",
             backgroundColor = Color.Transparent,
             textColor = Color.White,
-            onValueChange = { newText ->
-                println("Nuevo texto: $newText")
-            }
+            onValueChange = { newText -> password = newText }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        // Botón de Login
         CustomButton(
             text = "Iniciar Sesión",
-            onClick = { onLoginSuccess(navController) }, // Pasar navController a onLoginSuccess
+            onClick = { onLoginSuccess(navController, email, password) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -142,7 +150,6 @@ fun LoginScreen(navController: NavController) {
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(20.dp))
-        // Enlace para Registrarse
         Row {
             Text(text = "¿No tienes una cuenta?", color = primaryDark)
             Spacer(modifier = Modifier.width(4.dp))
@@ -151,7 +158,7 @@ fun LoginScreen(navController: NavController) {
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 modifier = Modifier.clickable {
-                    navController.navigate("register") // Navegar a la pantalla de registro
+                    navController.navigate("register")
                 }
             )
         }
@@ -159,8 +166,12 @@ fun LoginScreen(navController: NavController) {
 }
 
 
+
 @Composable
 fun RegisterScreen(navController: NavController) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -186,40 +197,29 @@ fun RegisterScreen(navController: NavController) {
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
-        // Campo de Nombre
-        CustomOutlinedTextField(
-            text = "Nombre",
-            backgroundColor = Color.Transparent,
-            textColor = Color.White,
-            onValueChange = { newText ->
-                println("Nuevo texto: $newText")
-            }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+
         // Campo de Correo Electrónico
         CustomOutlinedTextField(
             text = "Correo Electrónico",
             backgroundColor = Color.Transparent,
             textColor = Color.White,
-            onValueChange = { newText ->
-                println("Nuevo texto: $newText")
-            }
+            onValueChange = { newText -> email = newText }
         )
         Spacer(modifier = Modifier.height(8.dp))
+
         // Campo de Contraseña
         CustomOutlinedTextField(
             text = "Contraseña",
             backgroundColor = Color.Transparent,
             textColor = Color.White,
-            onValueChange = { newText ->
-                println("Nuevo texto: $newText")
-            }
+            onValueChange = { newText -> password = newText }
         )
         Spacer(modifier = Modifier.height(16.dp))
+
         // Botón de Registro
         CustomButton(
             text = "Registrarse",
-            onClick = { onRegisterSuccess(navController) }, // Pasar navController a onRegisterSuccess
+            onClick = { onRegisterSuccess(navController, email, password) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -299,12 +299,43 @@ fun CustomButton(
 }
 
 // Función para navegar a MainScreen
-fun onLoginSuccess(navController: NavController) {
-    Log.d("on login success", "success")
-    navController.navigate("main_screen") // Asegúrate de que esta ruta esté definida en tu NavHost
+fun onLoginSuccess(navController: NavController, email: String, password: String) {
+    if (email.isBlank() || password.isBlank()) {
+        Log.e("Login", "Email or Password is empty")
+        return
+    }
+
+    val auth: FirebaseAuth = FirebaseAuth.getInstance()
+
+    auth.signInWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                navController.navigate("main_screen")
+            } else {
+                Log.e("Login", "Authentication failed: ${task.exception?.message}")
+            }
+        }
 }
 
-fun onRegisterSuccess(navController: NavController) {
-    Log.d("on login success", "success")
-    navController.navigate("main_screen") // Asegúrate de que esta ruta esté definida en tu NavHost
+
+
+fun onRegisterSuccess(navController: NavController, email: String, password: String) {
+    if (email.isBlank() || password.isBlank()) {
+        Log.e("Register", "Email or Password is empty")
+        return
+    }
+
+    val auth: FirebaseAuth = FirebaseAuth.getInstance()
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                navController.navigate("main_screen")
+            } else {
+                Log.e("Register", "Authentication failed: ${task.exception?.message}")
+            }
+        }
 }
+
+
+

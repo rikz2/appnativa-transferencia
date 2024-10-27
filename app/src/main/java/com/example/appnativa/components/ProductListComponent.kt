@@ -18,6 +18,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.appnativa.R
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import com.example.appnativa.models.ProductCardModel
 import com.example.appnativa.models.ProductCardStatus
@@ -29,18 +37,25 @@ import com.example.compose.onPrimaryContainerDark
 import com.example.compose.onSecondaryDark
 import com.example.compose.secondaryContainerDark
 import com.example.compose.surfaceContainerDark
-
+import coil.compose.rememberImagePainter
+import com.example.appnativa.service.ProductService
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 
 @Composable
 fun ProductCard(
-    imageRes: Int,
+    imageUrl: String,
     title: String,
     description: String,
     price: String,
     status: ProductCardStatus,
     onAddToCartClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClickShoppingCart: () -> Unit,
+    onDeleteClickActive: () -> Unit,
+    onUpdateClick: () -> Unit // Callback para la opción de actualización
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .padding(8.dp)
@@ -53,27 +68,46 @@ fun ProductCard(
                 .background(surfaceContainerDark)
                 .padding(16.dp)
         ) {
-            // Product Image
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Actualizar") },
+                        onClick = {
+                            showMenu = false
+                            onUpdateClick()
+                        }
+                    )
+
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
             Image(
-                painter = painterResource(id = imageRes),
+                painter = rememberImagePainter(imageUrl),
                 contentDescription = "Product Image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .clip(RoundedCornerShape(10.dp)) // Ajusta el radio según sea necesario
+                    .clip(RoundedCornerShape(10.dp))
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // Title
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            // Description
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
@@ -81,7 +115,6 @@ fun ProductCard(
                 maxLines = 2
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // Price
             Text(
                 text = price,
                 style = MaterialTheme.typography.titleSmall,
@@ -89,6 +122,7 @@ fun ProductCard(
                 color = Color.White,
                 fontSize = 18.sp
             )
+
             Spacer(modifier = Modifier.height(16.dp))
             // Buttons Row
             Row(
@@ -97,10 +131,9 @@ fun ProductCard(
             ) {
                 if (status == ProductCardStatus.SHOPPINGCART) {
                     CustomButton(
-                        text = "Delete",
-                        onClick = onDeleteClick,
-                        modifier = Modifier
-                            .height(50.dp),
+                        text = "Eliminar",
+                        onClick = onDeleteClickShoppingCart,
+                        modifier = Modifier.height(50.dp),
                         backgroundColor = Color.Transparent,
                         contentColor = errorDark,
                         fontSize = 18,
@@ -108,21 +141,32 @@ fun ProductCard(
                     )
                 }
                 if (status == ProductCardStatus.ACTIVE) {
-                    CustomButton(
-                        text = "Agregar al Carrito",
-                        onClick = onAddToCartClick,
-                        modifier = Modifier
-                            .height(50.dp),
-                        backgroundColor = onPrimaryContainerDark,
-                        contentColor = Color.Black,
-                        fontSize = 18,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row {
+                        CustomButton(
+                            text = "Eliminar",
+                            onClick = onDeleteClickActive,
+                            modifier = Modifier.height(50.dp),
+                            backgroundColor = Color.Transparent,
+                            contentColor = Color.Red,
+                            fontSize = 18,
+                            fontWeight = FontWeight.Bold
+                        )
+                        CustomButton(
+                            text = "Agregar al Carrito",
+                            onClick = onAddToCartClick,
+                            modifier = Modifier.height(50.dp),
+                            backgroundColor = onPrimaryContainerDark,
+                            contentColor = Color.Black,
+                            fontSize = 18,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun CustomButton(
@@ -148,82 +192,132 @@ fun CustomButton(
     }
 }
 
-
-
-//var currentStatus: CardStatus = CardStatus.SHOPPINGCART
-
-
-@Preview(showBackground = false)
 @Composable
-fun PreviewCard(){
-    AppnativaTheme(darkTheme = true) {
-        ListProductCard(status = ProductCardStatus.ACTIVE)
+fun ListProductCard(status: ProductCardStatus, productService: ProductService, user: FirebaseUser?) {
+    val productsState = remember { mutableStateOf<List<ProductCardModel>>(emptyList()) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var productToUpdate by remember { mutableStateOf<ProductCardModel?>(null) }
+
+    LaunchedEffect(Unit) {
+        loadProductsForUser(user, productService, productsState, status)
     }
-}
 
-@Composable
-fun ListProductCard(status: ProductCardStatus) {
-    val listItems = listOf(
-        ProductCardModel(
-            imageRes = R.drawable.item1,
-            title = "Product 1 product list",
-            description = "Description for product 1",
-            price = "$10.00",
-            status = ProductCardStatus.ACTIVE
-        ),
-
-        ProductCardModel(
-            imageRes = R.drawable.item2,
-            title = "Product 2 product list",
-            description = "Description for product 2",
-            price = "$20.00",
-            status = ProductCardStatus.ACTIVE
-        ),
-
-        ProductCardModel(
-            imageRes = R.drawable.item3,
-            title = "Product 3 shopping cart",
-            description = "Description for product 2",
-            price = "$20.00",
-            status = ProductCardStatus.SHOPPINGCART
-        ),
-
-        ProductCardModel(
-            imageRes = R.drawable.item4,
-            title = "Product 4 shopping cart",
-            description = "Description for product 2",
-            price = "$20.00",
-            status = ProductCardStatus.SHOPPINGCART
-        ),
-        ProductCardModel(
-            imageRes = R.drawable.item1,
-            title = "Product 5 shopping cart",
-            description = "Description for product 2",
-            price = "$20.00",
-            status = ProductCardStatus.SHOPPINGCART
-        ),
-
-    )
-
-    // Filtrar la lista según el estado
-    val filteredItems = listItems.filter { it.status == status }
+    val products = productsState.value
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-//            .background(Color.DarkGray)
             .padding(15.dp)
     ) {
-        filteredItems.forEach { item ->
-            ProductCard(
-                imageRes = item.imageRes,
-                title = item.title,
-                description = item.description,
-                price = item.price,
-                status=item.status,
-                onAddToCartClick = { onAddToCartClick() },
-                onDeleteClick = { onDeleteClick() }
-            )
+        if (products.isEmpty()) {
+            Text("No se encontraron productos.", color = Color.White)
+        } else {
+            products.forEach { item ->
+                ProductCard(
+                    imageUrl = item.imageUrl,
+                    title = item.title,
+                    description = item.description,
+                    price = item.price,
+                    status = item.status,
+                    onAddToCartClick = {
+                        productService.updateProductStatus(item.id, ProductCardStatus.SHOPPINGCART) { success ->
+                            if (success) {
+                                loadProductsForUser(user, productService, productsState, status)
+                            } else {
+                                // Maneja el error
+                            }
+                        }
+                    },
+                    onDeleteClickShoppingCart = {
+                        productService.updateProductStatus(item.id, ProductCardStatus.ACTIVE) { success ->
+                            if (success) {
+                                loadProductsForUser(user, productService, productsState, status)
+                            } else {
+                                // Maneja el error
+                            }
+                        }
+                    },
+                    onDeleteClickActive = {
+                        productService.deleteProduct(item.id) { success ->
+                            if (success) loadProductsForUser(user, productService, productsState, status)
+                        }
+                    },
+                    onUpdateClick = {
+                        productToUpdate = item
+                        showUpdateDialog = true
+                    }
+                )
+            }
+        }
+    }
+
+    if (showUpdateDialog && productToUpdate != null) {
+        UpdateProductDialog(
+            product = productToUpdate!!,
+            onDismiss = { showUpdateDialog = false },
+            onUpdate = { updatedProduct ->
+                productService.updateProduct(updatedProduct) { success ->
+                    if (success) loadProductsForUser(user, productService, productsState, status)
+                    showUpdateDialog = false
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun UpdateProductDialog(
+    product: ProductCardModel,
+    onDismiss: () -> Unit,
+    onUpdate: (ProductCardModel) -> Unit
+) {
+    var imageUrl by remember { mutableStateOf(product.imageUrl) }
+    var title by remember { mutableStateOf(product.title) }
+    var description by remember { mutableStateOf(product.description) }
+    var price by remember { mutableStateOf(product.price) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Actualizar Producto", fontWeight = FontWeight.Bold)},
+        text = {
+            Column {
+                OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("URL de la imagen") })
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Título") })
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Descripción") })
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Precio") })
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                onUpdate(product.copy(imageUrl = imageUrl, title = title, description = description, price = price))
+            }) {
+                Text("Actualizar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = Color.Red)
+            }
+        }
+    )
+}
+
+
+
+// Función auxiliar para cargar productos filtrados por estado y usuario
+private fun loadProductsForUser(
+    user: FirebaseUser?,
+    productService: ProductService,
+    productsState: MutableState<List<ProductCardModel>>,
+    status: ProductCardStatus
+) {
+    val userId = user?.uid
+    if (userId != null) {
+        productService.getProductsByUser { userProducts ->
+            productsState.value = userProducts.filter { it.status == status && it.uid == userId }
         }
     }
 }
@@ -233,8 +327,10 @@ fun ListProductCard(status: ProductCardStatus) {
 fun onAddToCartClick(){
 
 }
+fun  onDeleteClickActive(id:String){
 
-fun  onDeleteClick(){
+}
 
+fun  onDeleteClickShoppingCart(){
 }
 

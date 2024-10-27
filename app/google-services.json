@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "37397597142",
+    "project_id": "appnativa-77f11",
+    "storage_bucket": "appnativa-77f11.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:37397597142:android:97013b3571bdf4c02b3277",
+        "android_client_info": {
+          "package_name": "com.example.appnativa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDK1-n-tOe_pPb9nxkWnOxm_gXc9rwLLyA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

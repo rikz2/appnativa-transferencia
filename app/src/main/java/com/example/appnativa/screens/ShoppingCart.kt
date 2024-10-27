@@ -31,17 +31,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.appnativa.components.ListProductCard
 import com.example.appnativa.models.ProductCardStatus
+import com.example.appnativa.service.ProductService
 import com.example.compose.backgroundDark
 import com.example.compose.onPrimaryContainerDark
 import com.example.compose.primaryDark
 import com.example.compose.secondaryDarkMediumContrast
+import com.google.firebase.auth.FirebaseUser
 
-@Preview(showBackground = true)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShoppingCart(){
+fun ShoppingCart(user: FirebaseUser?){
     val currentStatus = remember { mutableStateOf(ProductCardStatus.SHOPPINGCART) }
+    val productService = ProductService() // Crear instancia del servicio
     Scaffold {
         Column(
             modifier = Modifier
@@ -72,7 +74,7 @@ fun ShoppingCart(){
                     .padding(top = 20.dp) // Asegurarse de que haya espacio alrededor
             ){
                 item {
-                    ListProductCard(currentStatus.value)
+                    ListProductCard(currentStatus.value,productService = productService,user)
 
 
                     Box(

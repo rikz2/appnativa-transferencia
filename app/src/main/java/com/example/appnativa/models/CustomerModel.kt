@@ -6,6 +6,7 @@ enum class CustomerStatus {
 }
 
 class CustomerModel(
+    var id:String,
     var name: String,
     var email: String,
     var passWord: String,
