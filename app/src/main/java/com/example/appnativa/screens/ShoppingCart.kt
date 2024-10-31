@@ -19,8 +19,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.appnativa.components.ListProductCard
+import com.example.appnativa.models.ProductCardModel
 import com.example.appnativa.models.ProductCardStatus
 import com.example.appnativa.service.ProductService
 import com.example.compose.backgroundDark
@@ -41,9 +45,19 @@ import com.google.firebase.auth.FirebaseUser
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShoppingCart(user: FirebaseUser?){
-    val currentStatus = remember { mutableStateOf(ProductCardStatus.SHOPPINGCART) }
-    val productService = ProductService() // Crear instancia del servicio
+fun ShoppingCart(user: FirebaseUser?) {
+    val productService = ProductService()
+    var total by remember { mutableStateOf(0.0) }
+    var products by remember { mutableStateOf(listOf<ProductCardModel>()) }
+
+    LaunchedEffect(Unit) {
+        // Escuchar cambios en los productos del carrito en tiempo real
+        productService.getShoppingCartProductsByUserRealtime { updatedProducts ->
+            products = updatedProducts
+            total = products.sumOf { it.price.toDoubleOrNull() ?: 0.0 }
+        }
+    }
+
     Scaffold {
         Column(
             modifier = Modifier
@@ -53,36 +67,21 @@ fun ShoppingCart(user: FirebaseUser?){
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(15.dp)
-                    .padding(top = 16.dp) // Margen superior
-                    .clip(RoundedCornerShape(10.dp)) // Clip primero para asegurarse de que el borde sea redondeado
-                    .background(Color.Black)
-                    .border(0.dp, Color.White, RoundedCornerShape(10.dp))
-                    .padding(20.dp)
-            ) {
-                Column {
-                    Text(text = "Carrito de Compras", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
+            // Contenido de la interfaz
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 20.dp) // Asegurarse de que haya espacio alrededor
-            ){
+                    .padding(top = 20.dp)
+            ) {
                 item {
-                    ListProductCard(currentStatus.value,productService = productService,user)
-
+                    ListProductCard(ProductCardStatus.SHOPPINGCART, productService, user)
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(15.dp)
-                            .padding(top = 8.dp, bottom = 16.dp) // Margen superior
-                            .clip(RoundedCornerShape(10.dp)) // Clip primero para asegurarse de que el borde sea redondeado
+                            .padding(top = 8.dp, bottom = 16.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(secondaryDarkMediumContrast)
                             .border(0.dp, Color.White, RoundedCornerShape(10.dp))
                             .padding(20.dp)
@@ -100,7 +99,7 @@ fun ShoppingCart(user: FirebaseUser?){
                                     fontSize = 20.sp
                                 )
                                 Text(
-                                    text = "$60000",
+                                    text = "$${"%.2f".format(total)}",
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 )
@@ -110,34 +109,10 @@ fun ShoppingCart(user: FirebaseUser?){
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                @Composable
-                                fun CustomButton(
-                                    text: String,
-                                    onClick: () -> Unit,
-                                    modifier: Modifier = Modifier,
-                                    backgroundColor: Color = MaterialTheme.colorScheme.primary,
-                                    contentColor: Color = Color.White,
-                                    fontSize: Int,
-                                    fontWeight: FontWeight = FontWeight.Normal
-                                ) {
-                                    androidx.compose.material3.Button(
-                                        onClick = onClick,
-                                        modifier = modifier,
-                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(backgroundColor)
-                                    ) {
-                                        Text(
-                                            text = text,
-                                            color = contentColor,
-                                            fontSize = fontSize.sp,
-                                            fontWeight = fontWeight
-                                        )
-                                    }
-                                }
                                 CustomButton(
                                     text = "Comprar",
-                                    onClick = {  },
-                                    modifier = Modifier
-                                        .height(50.dp),
+                                    onClick = { /* Acciones de compra */ },
+                                    modifier = Modifier.height(50.dp),
                                     backgroundColor = Color.Black,
                                     contentColor = primaryDark,
                                     fontSize = 18,
@@ -151,4 +126,5 @@ fun ShoppingCart(user: FirebaseUser?){
         }
     }
 }
+
 

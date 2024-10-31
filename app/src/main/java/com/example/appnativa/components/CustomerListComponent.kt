@@ -17,6 +17,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,23 +34,24 @@ import com.example.appnativa.models.CustomerModel
 import com.example.appnativa.models.CustomerStatus
 import com.example.appnativa.models.ProductCardModel
 import com.example.appnativa.models.ProductCardStatus
+import com.example.appnativa.service.CustomerService
+import com.example.appnativa.service.ProductService
 import com.example.compose.AppnativaTheme
 import com.example.compose.errorDark
 import com.example.compose.surfaceContainerDark
-
+import com.google.firebase.auth.FirebaseUser
 
 @Composable
 fun CustomerCard(
     name: String,
     email: String,
-    passWord: String,
-    status: CustomerStatus
+    status: CustomerStatus,
+    onDeleteClickCustomer: () -> Unit,
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(10.dp)
-//            .padding(top = 8.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(Color.Black)
             .border(0.dp, Color.White, RoundedCornerShape(10.dp))
@@ -82,7 +87,7 @@ fun CustomerCard(
                 }
                 CustomButtonCustomerItem(
                     text = "Eliminar",
-                    onClick = { onDeleteCustomer() },
+                    onClick = onDeleteClickCustomer,
                     modifier = Modifier
                         .height(50.dp),
                     backgroundColor = Color.Transparent,
@@ -94,7 +99,64 @@ fun CustomerCard(
         }
     }
 }
+@Composable
+fun CustomerListComponent(status: CustomerStatus, customerService: CustomerService, user: FirebaseUser?) {
+    val customerState = remember { mutableStateOf<List<CustomerModel>>(emptyList()) }
+    val isLoading = remember { mutableStateOf(true) } // Estado de carga
 
+    LaunchedEffect(Unit) {
+        if (user != null) { // Asegura que `user` no sea null antes de cargar
+            loadCustomersForUser(user, customerService, customerState, status) {
+                isLoading.value = false // Finaliza el estado de carga
+            }
+        } else {
+            isLoading.value = false // En caso de que no haya usuario, se detiene la carga
+        }
+    }
+
+    val customers = customerState.value
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp)
+    ) {
+        if (isLoading.value) {
+            Text("Cargando...", color = Color.White)
+        } else if (customers.isEmpty()) {
+            Text("No se encontraron clientes.", color = Color.White)
+        } else {
+            customers.forEach { item ->
+                CustomerCard(
+                    name = item.name,
+                    email = item.email,
+                    status = item.status,
+                    onDeleteClickCustomer = {
+                        customerService.deleteCustomer(item.id) { success ->
+                            if (success && user != null) { // Verifica que `user` no sea null
+                                loadCustomersForUser(user, customerService, customerState, status)
+                            }
+                        }
+                    }
+
+                )
+            }
+        }
+    }
+}
+
+private fun loadCustomersForUser(
+    user: FirebaseUser,
+    customerService: CustomerService,
+    customersState: MutableState<List<CustomerModel>>,
+    status: CustomerStatus,
+    onLoaded: () -> Unit = {}
+) {
+    customerService.getCustomersByUser { userCustomers ->
+        customersState.value = userCustomers.filter { it.status == status && it.uid == user.uid }
+        onLoaded() // Llama al callback cuando los datos están listos
+    }
+}
 
 
 @Composable
@@ -118,50 +180,5 @@ fun CustomButtonCustomerItem(
             fontSize = fontSize.sp,
             fontWeight = fontWeight
         )
-    }
-}
-
-fun onDeleteCustomer(){
-
-}
-
-@Preview(showBackground = false)
-@Composable
-fun PreviewCardCustomer(){
-    AppnativaTheme(darkTheme = true) {
-        CustomerListComponent(status = CustomerStatus.ACTIVE)
-    }
-}
-
-@Composable
-fun CustomerListComponent(status: CustomerStatus) {
-    val listItems = listOf(
-
-        CustomerModel(
-            id="",
-            name = "Andres",
-            email = "andres@gmail.com",
-            passWord = "123",
-            status = CustomerStatus.ACTIVE
-        ),
-    )
-
-    // Filtrar la lista según el estado
-    val filteredItems = listItems.filter { it.status == status }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-//            .background(Color.DarkGray)
-            .padding(8.dp)
-    ) {
-        filteredItems.forEach { item ->
-            CustomerCard(
-                name = item.name,
-                email = item.email,
-                passWord = item.passWord,
-                status = item.status
-            )
-        }
     }
 }

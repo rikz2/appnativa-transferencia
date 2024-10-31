@@ -33,7 +33,7 @@ fun BottomNavGraph(navController: NavHostController, user:FirebaseUser?) {
         }
 
         composable(route = BottomBarScreen.Customers.route) {
-            CustomersScreen()
+            CustomersScreen(user)
         }
         composable(route = "main_screen") {
             MainScreen()  // Aquí se navega a MainScreen

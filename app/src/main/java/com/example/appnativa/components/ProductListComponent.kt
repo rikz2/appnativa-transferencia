@@ -79,21 +79,22 @@ fun ProductCard(
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 )
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Actualizar") },
-                        onClick = {
-                            showMenu = false
-                            onUpdateClick()
-                        }
-                    )
-
+                if (status == ProductCardStatus.ACTIVE) {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Actualizar") },
+                            onClick = {
+                                showMenu = false
+                                onUpdateClick()
+                            }
+                        )
+                    }
                 }
             }
 
@@ -323,14 +324,4 @@ private fun loadProductsForUser(
 }
 
 
-
-fun onAddToCartClick(){
-
-}
-fun  onDeleteClickActive(id:String){
-
-}
-
-fun  onDeleteClickShoppingCart(){
-}
 

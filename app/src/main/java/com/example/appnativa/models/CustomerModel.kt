@@ -5,10 +5,11 @@ enum class CustomerStatus {
     INACTIVE,
 }
 
-class CustomerModel(
-    var id:String,
-    var name: String,
-    var email: String,
-    var passWord: String,
-    var status: CustomerStatus
+data class CustomerModel(
+    var id: String = "",
+    var uid: String = "",
+    var name: String = "",
+    var passWord: String = "",
+    var email: String = "",
+    var status: CustomerStatus = CustomerStatus.ACTIVE
 )

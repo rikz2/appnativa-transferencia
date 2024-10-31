@@ -25,9 +25,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,20 +43,32 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import com.example.appnativa.components.CustomerListComponent
 import com.example.appnativa.components.ListProductCard
+import com.example.appnativa.models.CustomerModel
 import com.example.appnativa.models.CustomerStatus
+import com.example.appnativa.models.ProductCardModel
 import com.example.appnativa.models.ProductCardStatus
+import com.example.appnativa.service.CustomerService
 import com.example.compose.backgroundDark
 import com.example.compose.errorContainerDarkMediumContrast
 import com.example.compose.primaryDark
 import com.example.compose.surfaceDark
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 
-@Preview(showBackground = true)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomersScreen() {
+fun CustomersScreen(user: FirebaseUser?) {
     val currentStatus = remember { mutableStateOf(CustomerStatus.ACTIVE) }
     val showDialog = remember { mutableStateOf(false) }
+    var customers by remember { mutableStateOf(listOf<CustomerModel>()) }
+    val customerService = CustomerService()
+
+    LaunchedEffect(Unit) {
+        // Escuchar cambios en los customers en tiempo real
+        customerService.getCustomersByUserRealtime { updatedCustomers ->
+            customers = updatedCustomers
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -74,38 +89,48 @@ fun CustomersScreen() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(15.dp)
-                    .padding(top = 16.dp) // Margen superior
-                    .clip(RoundedCornerShape(10.dp)) // Clip primero para asegurarse de que el borde sea redondeado
-                    .background(Color.Black)
-                    .border(0.dp, Color.White, RoundedCornerShape(10.dp))
-                    .padding(20.dp)
-            ) {
-                Column {
-                    Text(text = "Clientes", color = Color.White, fontWeight = FontWeight.Bold)
+            if (customers.isEmpty()) {
+                Text("No se encontraron clientes.", color = Color.White)
+            } else {
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(15.dp)
+                        .padding(top = 16.dp) // Margen superior
+                        .clip(RoundedCornerShape(10.dp)) // Clip primero para asegurarse de que el borde sea redondeado
+                        .background(Color.Black)
+                        .border(0.dp, Color.White, RoundedCornerShape(10.dp))
+                        .padding(20.dp)
+                ) {
+                    Column {
+                        Text(text = "Clientes", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 10.dp) // Asegurarse de que haya espacio alrededor
+                ) {
+                    item {
+                        CustomerListComponent(currentStatus.value,customerService,user)
+                    }
                 }
             }
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 10.dp) // Asegurarse de que haya espacio alrededor
-            ) {
-                item {
-                    CustomerListComponent(currentStatus.value)
-                }
+            ShowDialogCustomCustomer(showDialog = showDialog, customerService)
+
             }
-        }
-        ShowDialogCustomCustomer(showDialog = showDialog)
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShowDialogCustomCustomer(showDialog: MutableState<Boolean>) {
+fun ShowDialogCustomCustomer(showDialog: MutableState<Boolean>,customerService: CustomerService) {
     if (showDialog.value) {
+        // Obtain the current user's UID
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+        val name = remember { mutableStateOf(TextFieldValue("")) }
+        val email = remember { mutableStateOf(TextFieldValue("")) }
+
         AlertDialog(
             properties = DialogProperties(
                 usePlatformDefaultWidth = false // Permite personalizar el tamaño del diálogo
@@ -114,19 +139,17 @@ fun ShowDialogCustomCustomer(showDialog: MutableState<Boolean>) {
             onDismissRequest = { showDialog.value = false },
             title = { Text(text = "Agregar Cliente", fontWeight = FontWeight.Bold) },
             text = {
-                val title = remember { mutableStateOf(TextFieldValue("")) }
-                val description = remember { mutableStateOf(TextFieldValue("")) }
-                val price = remember { mutableStateOf(TextFieldValue("")) }
+
                 Column {
                     OutlinedTextField(
-                        value = title.value,
-                        onValueChange = { title.value = it },
+                        value = name.value,
+                        onValueChange = { name.value = it },
                         label = { Text("Nombre") }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
-                        value = description.value,
-                        onValueChange = { description.value = it },
+                        value = email.value,
+                        onValueChange = { email.value = it },
                         label = { Text("Correo electronico") }
                     )
                 }
@@ -135,8 +158,21 @@ fun ShowDialogCustomCustomer(showDialog: MutableState<Boolean>) {
                 CustomButton(
                     text = "Agregar",
                     onClick = {
-                        // Aquí va tu lógica para agregar el producto
-                        showDialog.value = false
+                        val newCustomer = CustomerModel(
+                            id = "", // Inicialmente vacío, se actualizará en el servicio
+                            uid= uid,
+                            name = name.value.text,
+                            email = email.value.text,
+                            passWord="",
+                            status = CustomerStatus.ACTIVE
+                        )
+                        customerService.addCustomer(newCustomer) { success ->
+                            if (success) {
+                                showDialog.value = false
+                            } else {
+                                // Maneja el error
+                            }
+                        }
                     },
                     modifier = Modifier.height(50.dp),
                     backgroundColor = primaryDark,
@@ -159,7 +195,6 @@ fun ShowDialogCustomCustomer(showDialog: MutableState<Boolean>) {
         )
     }
 }
-
 @Composable
 fun CustomButtonCustomer(
     text: String,

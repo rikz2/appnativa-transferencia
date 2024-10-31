@@ -3,7 +3,10 @@ package com.example.appnativa.service
 import com.example.appnativa.models.ProductCardModel
 import com.example.appnativa.models.ProductCardStatus
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 class ProductService {
     private val database = FirebaseDatabase.getInstance().reference.child("products")
@@ -17,15 +20,6 @@ class ProductService {
         }
     }
 
-//    fun getProductsByUser(onComplete: (List<ProductCardModel>) -> Unit) {
-//        val userId = auth.currentUser?.uid ?: return
-//        database.child(userId).get().addOnSuccessListener { snapshot ->
-//            val products = snapshot.children.mapNotNull { it.getValue(ProductCardModel::class.java) }
-//            onComplete(products)
-//        }.addOnFailureListener {
-//            onComplete(emptyList())
-//        }
-//    }
     fun getProductsByUser(onComplete: (List<ProductCardModel>) -> Unit) {
         val userId = auth.currentUser?.uid ?: return
         database.get().addOnSuccessListener { snapshot ->
@@ -36,6 +30,39 @@ class ProductService {
             onComplete(emptyList())
         }
     }
+
+    fun getShoppingCartProductsByUser(onComplete: (List<ProductCardModel>) -> Unit) {
+        val userId = auth.currentUser?.uid ?: return onComplete(emptyList())
+        database.get().addOnSuccessListener { snapshot ->
+            val products = snapshot.children.mapNotNull { it.getValue(ProductCardModel::class.java) }
+                .filter { it.uid == userId && it.status == ProductCardStatus.SHOPPINGCART }
+            onComplete(products)
+        }.addOnFailureListener {
+            onComplete(emptyList())
+        }
+    }
+    fun getShoppingCartTotal(onComplete: (Double) -> Unit) {
+        getShoppingCartProductsByUser { products ->
+            val total = products.sumOf { it.price.toDoubleOrNull() ?: 0.0 }
+            onComplete(total)
+        }
+    }
+
+    fun getShoppingCartProductsByUserRealtime(onUpdate: (List<ProductCardModel>) -> Unit) {
+        val userId = auth.currentUser?.uid ?: return onUpdate(emptyList())
+        database.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val products = snapshot.children.mapNotNull { it.getValue(ProductCardModel::class.java) }
+                    .filter { it.uid == userId && it.status == ProductCardStatus.SHOPPINGCART }
+                onUpdate(products)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onUpdate(emptyList())
+            }
+        })
+    }
+
 
     fun updateProduct(product: ProductCardModel, onComplete: (Boolean) -> Unit) {
         val productId = product.id ?: return
