@@ -50,17 +50,26 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.ktx.Firebase
 //import com.google.firebase.auth.ktx.auth
-
-
+import com.stripe.android.PaymentConfiguration
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        FirebaseApp.initializeApp(this) // Inicializar Firebase
+
+        // Inicializar Firebase
+        FirebaseApp.initializeApp(this)
+
+        // Inicializar Stripe
+        PaymentConfiguration.init(
+            applicationContext,
+            "pk_test_your_public_key_here" // Reemplaza con tu clave pública de Stripe
+        )
+
         setContent {
             App() // Aquí se llama a tu Composable principal
         }
     }
 }
+
 
 fun getUser(): FirebaseUser? {
     val auth: FirebaseAuth = FirebaseAuth.getInstance()

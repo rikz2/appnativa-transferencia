@@ -84,9 +84,13 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.tasks.await
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.location.Location
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -96,6 +100,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -186,6 +191,68 @@ fun BodyContent(user: FirebaseUser?, context: Context) {
                     }
                 }
                 ListProductCard(currentStatus.value, productService = productService, user)
+
+                // Sección de la cámara
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(15.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(surfaceVariantDark)
+                        .padding(20.dp)
+                ) {
+                    Column {
+                        val context = LocalContext.current
+                        var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
+
+                        // Launcher para capturar la imagen
+                        val cameraLauncher = rememberLauncherForActivityResult(
+                            ActivityResultContracts.TakePicturePreview()
+                        ) { bitmap ->
+                            if (bitmap != null) {
+                                capturedImage = bitmap
+                            } else {
+                                Toast.makeText(context, "Error al capturar la imagen", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        // Launcher para solicitar permisos
+                        val cameraPermissionLauncher = rememberLauncherForActivityResult(
+                            ActivityResultContracts.RequestPermission()
+                        ) { isGranted ->
+                            if (isGranted) {
+                                cameraLauncher.launch()
+                            } else {
+                                Toast.makeText(context, "Permiso de cámara denegado", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        Button(onClick = {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                                == PackageManager.PERMISSION_GRANTED
+                            ) {
+                                cameraLauncher.launch()
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        }) {
+                            Text("Abrir Cámara")
+                        }
+
+                        capturedImage?.let { bitmap ->
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "Imagen Capturada",
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                            )
+                        }
+                    }
+
+
+                }
+
             }
         }
     }
@@ -211,6 +278,7 @@ suspend fun getLocation(
         println("Permiso de ubicación no concedido.")
     }
 }
+
 
 
 

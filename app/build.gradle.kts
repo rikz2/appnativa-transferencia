@@ -86,4 +86,8 @@ dependencies {
 
 //    Image Url
     implementation("io.coil-kt:coil-compose:2.1.0")
+
+//    Stripe
+    implementation("com.stripe:stripe-android:20.34.0")
+
 }
